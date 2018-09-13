@@ -7,6 +7,7 @@ function storeRecordedAudio(buffers, bufferId){
     newBuffer.getChannelData(1).set(buffers[1]);
 
     loops[bufferId] = {}
+    loops[bufferId].id = bufferId;
     loops[bufferId].buffer = newBuffer;
     loops[bufferId].playing = false;
 }
@@ -19,14 +20,23 @@ function bufferSourceNode(buffer){
 
 function playLoop(id){
     bufferSource = bufferSourceNode(loops[id].buffer)
-    bufferSource.connect(audioCtx.destination)
-    bufferSource.loop = true
-    loops[id].playing = true
-    loops[id].source = bufferSource
-    bufferSource.start(0)
+    if(bufferSource && !loops[id].playing){
+        bufferSource.connect(audioCtx.destination)
+        bufferSource.loop = true
+        loops[id].playing = true
+        loops[id].source = bufferSource
+        bufferSource.start(0)
+    }
 }
 
-function loop(recorder, id){  //depends on a global
+function stopLoop(id){
+    if(loops[id].playing){
+        loops[id].playing = false
+        loops[id].source.stop(0)
+    }
+}
+
+function loop(recorder, id){ 
     let container = document.createElement("div")
     container.classList.add("loop")
 
@@ -60,14 +70,13 @@ function loop(recorder, id){  //depends on a global
     pauseButton.innerHTML = "stop loop"
     container.appendChild(pauseButton)
     pauseButton.onclick = () => {
-        loops[id].playing = false
-        loops[id].source.stop()
+        stopLoop(id)
     }
 
     return container
 }
 
-// main
+// main 'loop'
 navigator.mediaDevices.getUserMedia({ audio: true }).
     then(stream => {
         let microphoneSourceNode = audioCtx.createMediaStreamSource(stream)
@@ -78,6 +87,15 @@ navigator.mediaDevices.getUserMedia({ audio: true }).
         let stopallButton = document.getElementById("stopall")
 
         document.getElementById("loopall").onclick = () => {
+            for (var loop in loops) {
+                playLoop(loop)
+            }
+        }
+
+        document.getElementById("stopall").onclick = () => {
+            for (var loop in loops) {
+                stopLoop(loop)
+            }
         }
 
         let loopList = document.getElementById("looplist")
