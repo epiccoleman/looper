@@ -3,15 +3,7 @@ var play = document.querySelector("#play");
 var pause = document.querySelector("#pause");
 var stop = document.querySelector("#stop");
 
-var record2 = document.querySelector("#record2");
-var play2 = document.querySelector("#play2");
-var pause2 = document.querySelector("#pause2");
-var stop2 = document.querySelector("#stop2");
-
-/* stop.disabled = true; */
-
 var audioCtx = new window.AudioContext;
-var microphoneSourceNode
 var loops = { 1: {}, 2: {}}
 
 function storeRecordedAudio(buffers, bufferId){
@@ -28,9 +20,58 @@ function bufferSourceNode(buffer){
     return newSource;
 }
 
+function stopBuffer(rec, index){
+    console.log(index)
+    rec.stop()
+    recordedBuffer = rec.getBuffer(( buffers ) => {
+        storeRecordedAudio(buffers, index) })
+    rec.clear()
+}
+
+function loop(recorder, id){  //depends on a global
+    let container = document.createElement("div")
+    container.class = "loop"
+    
+    let recButton = document.createElement("button")
+    container.appendChild(recButton)
+    recButton.innerHTML = "record"
+    recButton.onclick = () => {
+        recorder.record()
+    }
+
+    let stopButton = document.createElement("button")
+    container.appendChild(stopButton)
+    stopButton.innerHTML = "stop"
+    stopButton.onclick = () => {
+        recorder.stop()
+        recorder.getBuffer(( buffers ) => {
+            storeRecordedAudio(buffers, id) })
+        recorder.clear()
+    }
+
+    let playButton = document.createElement("button")
+    container.appendChild(playButton)
+    playButton.innerHTML = "play"
+    playButton.onclick = () => {
+        bufferSource = bufferSourceNode(loops[id].buffer)
+        bufferSource.connect(audioCtx.destination)
+        bufferSource.loop = true
+        bufferSource.start(0)
+    }
+
+    let pauseButton = document.createElement("button")
+    pauseButton.innerHTML = "stop loop"
+    container.appendChild(pauseButton)
+    pauseButton.onclick = () => {
+        bufferSource.stop(0)
+    }
+
+    return container
+}
+
 navigator.mediaDevices.getUserMedia({ audio: true }).
     then(stream => {
-        microphoneSourceNode = audioCtx.createMediaStreamSource(stream)
+        let microphoneSourceNode = audioCtx.createMediaStreamSource(stream)
         var rec = new Recorder(microphoneSourceNode)
         var recordedBuffer
 
@@ -42,7 +83,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).
         }
         stop.onclick = (e) => {
             rec.stop()
-            recordedBuffer = rec.getBuffer(( buffers ) => {
+            rec.getBuffer(( buffers ) => {
                 storeRecordedAudio(buffers, 1) })
             rec.clear()
         }
@@ -56,25 +97,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).
             bufferSource.stop(0)
         }
 
-        record2.onclick = (e) => {
-            console.log('recording')
-            rec.record()
-        }
-        stop2.onclick = (e) => {
-            console.log('stopping')
-            rec.stop()
-            recordedBuffer = rec.getBuffer(( buffers ) => {
-                storeRecordedAudio(buffers, 2) })
-            rec.clear()
-        }
-        play2.onclick = () => {
-            bufferSource2 = bufferSourceNode(loops[2].buffer)
-            bufferSource2.connect(audioCtx.destination)
-            bufferSource2.loop = true
-            bufferSource2.start(0)
-        }
-        pause2.onclick = () => {
-            bufferSource2.stop(0)
-        }
-
+        document.getElementById("looplist").
+                 appendChild(
+                     loop(rec, 2))
+        
     })
