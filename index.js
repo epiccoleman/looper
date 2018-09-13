@@ -12,35 +12,20 @@ var stop2 = document.querySelector("#stop2");
 
 var audioCtx = new window.AudioContext;
 var microphoneSourceNode
-var bufferSource
-var bufferSource2
+var loops = { 1: {}, 2: {}}
 
-function getBufferSource(buffers){
-    console.log('get')
-    var newSource = audioCtx.createBufferSource();
+function storeRecordedAudio(buffers, bufferId){
     var newBuffer = audioCtx.createBuffer( 2, buffers[0].length, audioCtx.sampleRate );
     newBuffer.getChannelData(0).set(buffers[0]);
     newBuffer.getChannelData(1).set(buffers[1]);
-    newSource.buffer = newBuffer;
 
-    console.log(newSource)
-
-    bufferSource = newSource
-    console.log(bufferSource)
+    loops[bufferId].buffer = newBuffer;
 }
 
-function getBufferSource2(buffers){
-    console.log('get')
+function bufferSourceNode(buffer){
     var newSource = audioCtx.createBufferSource();
-    var newBuffer = audioCtx.createBuffer( 2, buffers[0].length, audioCtx.sampleRate );
-    newBuffer.getChannelData(0).set(buffers[0]);
-    newBuffer.getChannelData(1).set(buffers[1]);
-    newSource.buffer = newBuffer;
-
-    console.log(newSource)
-
-    bufferSource2 = newSource
-    console.log(bufferSource)
+    newSource.buffer = buffer;
+    return newSource;
 }
 
 navigator.mediaDevices.getUserMedia({ audio: true }).
@@ -49,18 +34,20 @@ navigator.mediaDevices.getUserMedia({ audio: true }).
         var rec = new Recorder(microphoneSourceNode)
         var recordedBuffer
 
+        let bufferSource
+        let bufferSource2
+
         record.onclick = (e) => {
-            console.log('recording')
             rec.record()
         }
         stop.onclick = (e) => {
-            console.log('stopping')
             rec.stop()
-            recordedBuffer = rec.getBuffer(( buffer ) => {
-                getBufferSource(buffer) })
+            recordedBuffer = rec.getBuffer(( buffers ) => {
+                storeRecordedAudio(buffers, 1) })
             rec.clear()
         }
         play.onclick = () => {
+            bufferSource = bufferSourceNode(loops[1].buffer)
             bufferSource.connect(audioCtx.destination)
             bufferSource.loop = true
             bufferSource.start(0)
@@ -76,11 +63,12 @@ navigator.mediaDevices.getUserMedia({ audio: true }).
         stop2.onclick = (e) => {
             console.log('stopping')
             rec.stop()
-            recordedBuffer = rec.getBuffer(( buffer ) => {
-                getBufferSource2(buffer) })
+            recordedBuffer = rec.getBuffer(( buffers ) => {
+                storeRecordedAudio(buffers, 2) })
             rec.clear()
         }
         play2.onclick = () => {
+            bufferSource2 = bufferSourceNode(loops[2].buffer)
             bufferSource2.connect(audioCtx.destination)
             bufferSource2.loop = true
             bufferSource2.start(0)
@@ -90,5 +78,3 @@ navigator.mediaDevices.getUserMedia({ audio: true }).
         }
 
     })
-/* } */
-
