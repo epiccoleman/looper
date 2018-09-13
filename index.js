@@ -1,61 +1,51 @@
 var record = document.querySelector("#record");
 var play = document.querySelector("#play");
-var player = document.querySelector("#player");
+var pause = document.querySelector("#pause");
 var stop = document.querySelector("#stop");
 
-stop.disabled = true;
-
 var audioCtx = new window.AudioContext;
+var microphoneSourceNode
+var bufferSource
 
-if (navigator.mediaDevices.getUserMedia){  // i guess pretty much everything happens in here
-    console.log("media");
+function getBufferSource(buffers){
+    console.log('get')
+    var newSource = audioCtx.createBufferSource();
+    var newBuffer = audioCtx.createBuffer( 2, buffers[0].length, audioCtx.sampleRate );
+    newBuffer.getChannelData(0).set(buffers[0]);
+    newBuffer.getChannelData(1).set(buffers[1]);
+    newSource.buffer = newBuffer;
 
-    var constraints = { audio: true };
-    var chunks = [];
+    console.log(newSource)
 
-    var onSuccess = (stream) => {
-        var mediaRecorder = new MediaRecorder(stream);
+    bufferSource = newSource
+    console.log(bufferSource)
+}
 
-        record.onclick = () => {
-            mediaRecorder.start();
-            console.log(mediaRecorder.state);
-            console.log("recorder started");
+navigator.mediaDevices.getUserMedia({ audio: true }).
+    then(stream => {
+        microphoneSourceNode = audioCtx.createMediaStreamSource(stream)
+        var rec = new Recorder(microphoneSourceNode)
+        var recordedBuffer
 
-            stop.disabled = false;
-            record.disabled = true;
-        };
-
-        stop.onclick = () => {
-            mediaRecorder.stop();
-            console.log(mediaRecorder.state);
-            console.log("recorder stopped");
-
-            stop.disabled = true;
-            record.disabled = false;
-        };
-
+        record.onclick = (e) => {
+            console.log('recording')
+            rec.record()
+        }
+        stop.onclick = (e) => {
+            console.log('stopping')
+            rec.stop()
+            recordedBuffer = rec.getBuffer(( buffer ) => {
+                getBufferSource(buffer) })
+            rec.clear()
+        }
         play.onclick = () => {
-            player.play();
-        };
+            bufferSource.connect(audioCtx.destination)
+            bufferSource.loop = true
+            bufferSource.start(0)
+        }
+        pause.onclick = () => {
+            bufferSource.stop(0)
+        }
 
-        mediaRecorder.onstop = () => {
-            console.log("stopped");
-            var blob = new Blob(chunks, { 'type': 'audio/ogg; codecs=opus'} );
-            chunks = [];
-            var audioURL = window.URL.createObjectURL(blob);
-            player.src = audioURL;
-        };
 
-        mediaRecorder.ondataavailable = (e) => {
-            chunks.push(e.data);
-        };
-
-    };
-
-    var onError = () => {
-        console.log("nope");
-    };
-
-    navigator.mediaDevices.getUserMedia(constraints).then(onSuccess, onError);
-
-};
+    })
